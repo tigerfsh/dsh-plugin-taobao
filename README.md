@@ -91,5 +91,3 @@ For anything commercial or at scale, use the official open platforms instead —
 ## License
 
 MIT
-# dsh-plugin-taobao
-# dsh-plugin-taobao
