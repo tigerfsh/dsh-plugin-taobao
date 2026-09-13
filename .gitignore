@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# npm cache created inside the workspace because the global one is not writable here
+.npm-cache/
+
+# Publish artifacts
+*.tgz
+
+# dev residue — never publish: Chrome profile directories contain plaintext login cookies
+tb/
+tb-probe/
+preflight-taobao.mjs
+profile/
+**/Default/Cookies
+
+# logs
+*.log
