@@ -28,49 +28,56 @@ If the session is not logged in, `taobao_search` still succeeds: it returns
 
 ## Install
 
-The package is not on the npm registry yet, so install it from the repository. `dsh plugin` is a
-thin pnpm forwarder that runs inside the profile directory, so every pnpm spec form works:
-
 ```sh
-# from a checkout on this machine — installed as a link, so local edits take effect immediately
-cd /path/to/dsh-plugin-taobao && npm install
-dsh plugin --profile web add /path/to/dsh-plugin-taobao
-
-# relative paths are anchored to the directory you ran dsh from, not to the profile
-dsh plugin --profile web add ../dsh-plugin-taobao
-
-# straight from GitHub, no checkout needed
-dsh plugin --profile web add github:tigerfsh/dsh-plugin-taobao
-
-# the same over SSH, if the repository is private or HTTPS is blocked
-dsh plugin --profile web add git+ssh://git@github.com:tigerfsh/dsh-plugin-taobao.git
-
-# pin a branch, tag or commit — today the repository has no tags, so name a ref or a sha
-dsh plugin --profile web add github:tigerfsh/dsh-plugin-taobao#main
+dsh plugin --profile web add @fushouhai/dsh-plugin-taobao
 ```
 
-Once it is published, the plain name works too: `dsh plugin --profile web add dsh-plugin-taobao`.
-
-A path spec installs as a `link:`, and pnpm does not install a linked package's dependencies — only
-a git or registry spec does. So a checkout used this way needs its own `npm install` first, as shown
-above; without it the harness cannot load the plugin and reports
-`ERR_MODULE_NOT_FOUND: @deepseek-ai/schemastery`.
-
-Nothing needs to be built on install: `lib/` is the source, `package.json` declares no `scripts`,
-and the shipped files are exactly what `files` lists. That also means the `allowBuilds` prompt pnpm
-raises for git-hosted plugins does not apply here.
+Nothing needs to be built: `lib/` is the source, `package.json` declares no `scripts`, and the
+shipped files are exactly what `files` lists.
 
 The package declares `dsh.bundle`, so the install registers `tool-taobao` under
 `dsh.profile.bundles` and the tools appear after the next restart of the harness. Reconciliation
-runs against installed state, so `remove` takes the layer back out again. `dsh plugin` forwards to
-pnpm, so any pnpm argument works (`add`, `remove`, `why`, `update`).
+runs against installed state, so `remove` takes the layer back out again. `dsh plugin` is a thin
+pnpm forwarder that runs inside the profile directory, so any pnpm argument works (`add`, `remove`,
+`why`, `update`).
+
+The DSH core packages are optional `peerDependencies`: the launcher already exposes them to
+out-of-tree plugins through its own module fallback, and they are marked optional so the installer
+does not pull a second copy of the harness's own packages into the profile. Note that the public
+`latest` tag of `@deepseek-ai/dsh-tools` can lag the installed harness — use the matching channel.
+
+### From a checkout
+
+A path spec installs as a `link:`, so local edits take effect immediately — the route to use while
+hacking on the plugin. pnpm does not install a linked package's dependencies, so the checkout needs
+its own `npm install` first; without it the harness cannot load the plugin and reports
+`ERR_MODULE_NOT_FOUND: @deepseek-ai/schemastery`.
+
+```sh
+cd /path/to/dsh-plugin-taobao && npm install
+dsh plugin --profile web add /path/to/dsh-plugin-taobao
+# relative paths are anchored to where you ran dsh, not to the profile
+dsh plugin --profile web add ../dsh-plugin-taobao
+```
+
+### From git
+
+Install straight from GitHub, with no checkout. Use this to pin a ref or to try an unreleased
+commit.
+
+```sh
+dsh plugin --profile web add github:tigerfsh/dsh-plugin-taobao
+# the same over SSH, if the repository is private or HTTPS is blocked
+dsh plugin --profile web add git+ssh://git@github.com:tigerfsh/dsh-plugin-taobao.git
+# pin a branch, tag or commit
+dsh plugin --profile web add github:tigerfsh/dsh-plugin-taobao#main
+```
+
+The `allowBuilds` prompt pnpm raises for git-hosted plugins does not apply here, for the same
+reason nothing needs to be built.
 
 Mounting the row by hand is the other route, and the one to use when you want to set `cliPath` or
 `dataDir` in the same place; see [Configuration](#configuration). Use only one of the two routes.
-
-The DSH core packages are `peerDependencies`: the launcher already exposes them to out-of-tree
-plugins through its own module fallback, so you do not install them yourself. Note that the public
-`latest` tag of `@deepseek-ai/dsh-tools` can lag the installed harness — use the matching channel.
 
 ## Configuration
 
@@ -88,7 +95,7 @@ To mount the row by hand instead of through `dsh.profile.bundles`, after adding 
 ```yaml
 - insert:
     - id: tool-taobao
-      name: 'dsh-plugin-taobao'
+      name: '@fushouhai/dsh-plugin-taobao'
 ```
 
 To override a field, address the row from the same patch layer
