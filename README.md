@@ -89,6 +89,7 @@ Every field has a working default; an unconfigured mount is the normal case.
 | `dataDir` | `$DSH_HOME/taobao` | Where the Chrome profile and run files live. |
 | `qrBaseUrl` | `http://127.0.0.1:3099` | Local page showing the current QR code. |
 | `cliTimeoutMs` | `180000` | Per-command timeout; the first launch is the slow one. |
+| `qrRefreshMs` | `60000` | Shortest interval before the shown QR may be replaced, and between forced navigations to the login page. |
 
 To mount the row by hand instead of through `dsh.profile.bundles`, after adding the dependency:
 
@@ -118,8 +119,13 @@ harness. It therefore survives browser restarts and harness restarts, and reinst
 the plugin never touches it. It does expire after days or weeks; when it does, `taobao_search`
 returns the QR again and you re-scan.
 
-The QR itself is decoded from the login page canvas and re-served as a live local page that
-refreshes every few seconds, so a rotated code never goes stale under you.
+The QR itself is decoded from the login page canvas and re-served as a live local page. The capture
+loop runs every few seconds, but `qrRefreshMs` throttles two things. The served image is held that
+long before another code may replace it — Taobao issues a new code only every couple of minutes, so
+a re-decode that disagrees is usually capture noise. Forced navigation to the login page is capped
+at the same interval: a half-authenticated session makes Taobao bounce the page away to the
+logged-in home page, and re-navigating on every poll would paint a fresh QR each time and flicker
+the image out from under you.
 
 ## Please read before using this against real accounts
 
