@@ -15,9 +15,9 @@ jobs:
       contents: read
       id-token: write # required by `npm publish --provenance`
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
@@ -54,6 +54,22 @@ jobs:
           '
 
       - run: npm ci
+
+      # npm rejects an unusable credential in well under a second and reports only "exit code 1",
+      # which says nothing about why. Say it here instead, so the run summary is actionable.
+      - name: npm token must authenticate
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            echo "::error::NPM_TOKEN is not set. Add it under Settings -> Secrets and variables -> Actions: a granular token with Read and write, and 'Bypass two-factor authentication for automation' ticked."
+            exit 1
+          fi
+          if ! account="$(npm whoami 2>&1)"; then
+            echo "::error::NPM_TOKEN was rejected by the registry: ${account}"
+            exit 1
+          fi
+          echo "authenticated as ${account}"
 
       # `access: public` comes from publishConfig in package.json — scoped packages default to
       # private and would otherwise fail with E402.
