@@ -20,3 +20,6 @@ profile/
 
 # logs
 *.log
+
+# Profile manifest backups taken before a `dsh plugin add` rewrites them
+.profile-backup/
