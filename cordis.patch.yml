@@ -1,4 +1,5 @@
-# Bundle patch for dsh-plugin-taobao: mounts the model-facing Taobao tools over the profile root.
+# Bundle patch for @fushouhai/dsh-plugin-taobao: mounts the model-facing Taobao tools over the
+# profile root.
 #
 # No machine-specific config is needed. The browser engine ships inside this package
 # (`lib/engine.mjs` + `lib/cli.mjs`), so `cliPath` defaults to it, and login state defaults to
@@ -12,4 +13,4 @@
 
 - insert:
     - id: tool-taobao
-      name: 'dsh-plugin-taobao'
+      name: '@fushouhai/dsh-plugin-taobao'

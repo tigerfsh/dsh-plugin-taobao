@@ -4,6 +4,10 @@ node_modules/
 # npm cache created inside the workspace because the global one is not writable here
 .npm-cache/
 
+# npm credentials — never commit, never publish
+.npmrc
+.npm-publish.npmrc
+
 # Publish artifacts
 *.tgz
 

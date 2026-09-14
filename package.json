@@ -1,5 +1,5 @@
 {
-  "name": "dsh-plugin-taobao",
+  "name": "@fushouhai/dsh-plugin-taobao",
   "version": "0.1.0",
   "description": "Taobao/Tmall product search with QR-code login for DeepSeek Harness",
   "type": "module",
@@ -15,6 +15,25 @@
     "README.md"
   ],
   "license": "MIT",
+  "author": "tigerfsh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tigerfsh/dsh-plugin-taobao.git"
+  },
+  "homepage": "https://github.com/tigerfsh/dsh-plugin-taobao#readme",
+  "bugs": {
+    "url": "https://github.com/tigerfsh/dsh-plugin-taobao/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "taobao",
+    "tmall",
+    "shopping",
+    "ecommerce"
+  ],
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -35,5 +54,13 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
     "@deepseek-ai/dsh-tools": "^0.1.5-rc.2"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
   }
 }

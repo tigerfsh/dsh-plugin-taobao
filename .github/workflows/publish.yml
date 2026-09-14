@@ -1,0 +1,77 @@
+name: publish
+
+# Publishing is gated on a GitHub Release: cut a release whose tag is `v<package.json version>`
+# and this fires. `workflow_dispatch` exists for the case where a version never made it out and
+# needs another push (npm rejects re-publishing a version that already exists, so this is safe).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required by `npm publish --provenance`
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Release tag must match package.json
+        if: github.event_name == 'release'
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="${{ github.event.release.tag_name }}"
+          if [ "v${version}" != "${tag}" ]; then
+            echo "::error::release tag ${tag} does not match package.json version ${version}"
+            exit 1
+          fi
+          echo "publishing ${version}"
+
+      # The Chrome profile under dataDir holds plaintext login cookies. It is gitignored, but
+      # .gitignore does not decide what npm ships — `files` does. Fail loudly if this ever leaks
+      # into the tarball rather than trusting the ignore rules.
+      - name: Tarball must carry no dev residue
+        run: |
+          npm pack --dry-run --json > /tmp/pack.json
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs"
+            const [packed] = JSON.parse(readFileSync("/tmp/pack.json", "utf8"))
+            const paths = packed.files.map((f) => f.path)
+            console.log(`packing ${paths.length} files: ${paths.join(", ")}`)
+            const leaked = paths.filter((p) =>
+              /(^|\/)(tb|tb-probe|profile|node_modules)(\/|$)|cookie|\.log$|\.npmrc$|\.tgz$/i.test(p))
+            if (leaked.length > 0) {
+              console.error(`::error::refusing to publish, tarball contains: ${leaked.join(", ")}`)
+              process.exit(1)
+            }
+          '
+
+      - run: npm ci
+
+      # `access: public` comes from publishConfig in package.json — scoped packages default to
+      # private and would otherwise fail with E402.
+      - run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+# NPM_TOKEN must be a *granular* access token with "Read and write" permission AND "Bypass two-
+# factor authentication for automation" ticked, stored as a repository secret. A token without
+# the bypass fails the publish with `E403 ... Two-factor authentication or granular access token
+# with bypass 2fa enabled is required`.
+#
+# Prerequisite: that bypass checkbox only appears once the npm account itself has 2FA enabled
+# (npmjs.com -> Settings -> Two-Factor Authentication). With account 2FA off, neither branch of
+# the error message is reachable and publishing is impossible — which is exactly the state this
+# account was in when the first publish attempt failed.
+#
+# Once the package exists on npm you can drop the secret and use trusted publishing instead: add
+# this repository as a trusted publisher in the package settings on npmjs.com, then delete the
+# `env:` block above. OIDC replaces the long-lived token, `id-token: write` is already granted,
+# and it sidesteps the 2FA requirement entirely — the better long-term option.
