@@ -24,7 +24,9 @@ If the session is not logged in, `taobao_search` still succeeds: it returns
 - Node.js >= 22 (the browser driver uses the built-in `fetch` and `WebSocket`).
 - A Chrome/Chromium binary. Defaults to `/usr/bin/google-chrome`; override with `$TB_CHROME`.
 - A graphical display for the first login. With `$DISPLAY` set the browser runs headful, which is
-  what you want: if Taobao shows a slider or risk-control challenge, you can solve it by hand.
+  what you want: if Taobao shows a slider or risk-control challenge, you can solve it by hand. The
+  window is kept minimized so it does not sit on top of the harness, and is brought back to the
+  front by itself when a challenge appears — see [The browser window](#the-browser-window).
 
 ## Install
 
@@ -90,6 +92,8 @@ Every field has a working default; an unconfigured mount is the normal case.
 | `qrBaseUrl` | `http://127.0.0.1:3099` | Local page showing the current QR code. |
 | `cliTimeoutMs` | `180000` | Per-command timeout; the first launch is the slow one. |
 | `qrRefreshMs` | `60000` | Shortest interval before the shown QR may be replaced, and between forced navigations to the login page. |
+| `windowMode` | `minimized` | Where the driven Chrome window goes: `minimized` keeps it out of the way, `normal` leaves it on screen. See [The browser window](#the-browser-window). |
+| `idleCloseMs` | `300000` | Close Chrome after this long without a Taobao call; `0` keeps it running. Closing never costs a re-scan — see [Does closing Chrome log me out?](#does-closing-chrome-log-me-out). |
 
 To mount the row by hand instead of through `dsh.profile.bundles`, after adding the dependency:
 
@@ -126,6 +130,43 @@ a re-decode that disagrees is usually capture noise. Forced navigation to the lo
 at the same interval: a half-authenticated session makes Taobao bounce the page away to the
 logged-in home page, and re-navigating on every poll would paint a fresh QR each time and flicker
 the image out from under you.
+
+## The browser window
+
+A real Chrome has to exist — Taobao treats a headless one differently — but the window is machinery,
+not interface: the QR is decoded from the login page and re-served on `qrBaseUrl`, and a search only
+reads the DOM. Left alone, that window lands on top of the harness and takes focus, so it is
+minimized as soon as the browser starts and focus goes back to whatever you were doing. The page
+keeps rendering while hidden — screenshot capture, layout and DOM reads are all unaffected, and a
+login page loaded *while already hidden* still paints a scannable QR.
+
+You get it back when you actually need it:
+
+- **Automatically** — when Taobao answers with a slider or another risk-control challenge, the
+  window is brought to the front and kept there until the challenge is gone. The tool result says
+  so instead of reporting an empty result set.
+- **By hand** — `node lib/cli.mjs show`, with `hide` to park it again. An explicit `show` sticks:
+  the QR page's next poll will not undo it.
+- **Permanently** — set `windowMode: normal` to leave the window on screen for the whole session.
+
+## Does closing Chrome log me out?
+
+No. Chrome is closed (`idleCloseMs`, five minutes by default) once the session has been idle, and the
+next Taobao call simply starts it again over the same profile: the cookies, including the `unb`
+token that marks the account, are on disk under `dataDir` with their own expiry, so **you do not
+scan again**. Only two things end the session: the cookie expiring on Taobao's side (weeks), or
+Taobao invalidating it.
+
+Three details worth knowing:
+
+- The close is never armed while the session is logged *out*: closing the browser out from under a
+  QR that nobody has scanned yet would throw the login page away.
+- The closing itself is a graceful `Browser.close`, which is also what flushes the cookie store —
+  so a login made moments earlier is already on disk before the browser goes away.
+- A QR page left open in a tab keeps asking for state, so while it is open the browser is kept
+  alive; close the tab (or wait for it to stop polling after a successful login) and the idle close
+  takes over. A daemon with nobody looking stops driving the browser entirely instead of
+  resurrecting it in the background.
 
 ## Please read before using this against real accounts
 
